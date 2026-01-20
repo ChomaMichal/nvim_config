@@ -265,31 +265,51 @@ return {
     build = ":Copilot auth",
     event = "BufReadPost",
     opts = {
+      -- disable everywhere by default, opt in for languages you want
       filetypes = {
         ["*"] = false,
         python = true,
         lua = true,
+        rust = false,
+        cpp = false,
+        c = false,
       },
-      suggestion = { enabled = true, auto_trigger = true, keymap = { accept = false, next = "<M-]>", prev = "<M-[>" } },
+      suggestion = {
+        enabled = true,
+        auto_trigger = true,
+        keymap = { accept = false, next = "<M-]>", prev = "<M-[>" },
+        debounce = 75,
+      },
       panel = { enabled = false },
-      filetypes = { markdown = true, help = true },
     },
+    config = function(_, opts)
+      -- setup copilot with opts
+      require("copilot").setup(opts)
+
+      -- disable copilot for specific filetypes
+      vim.api.nvim_create_autocmd("FileType", {
+        pattern = { "rust", "cpp", "c" },
+        callback = function()
+          require("copilot.suggestion").dismiss()
+          vim.cmd("Copilot disable")
+        end,
+      })
+
+      -- integrate with LazyVim cmp accept action (safe-guarded)
+      if type(LazyVim) == "table" and LazyVim.cmp and LazyVim.cmp.actions then
+        LazyVim.cmp.actions.ai_accept = function()
+          if require("copilot.suggestion").is_visible() then
+            if LazyVim.create_undo then LazyVim.create_undo() end
+            require("copilot.suggestion").accept()
+            return true
+          end
+        end
+      end
+    end,
   },
   {
     "neovim/nvim-lspconfig",
     opts = { servers = { copilot = { enabled = false } } },
-  },
-  {
-    "zbirenbaum/copilot.lua",
-    opts = function()
-      LazyVim.cmp.actions.ai_accept = function()
-        if require("copilot.suggestion").is_visible() then
-          LazyVim.create_undo()
-          require("copilot.suggestion").accept()
-          return true
-        end
-      end
-    end,
   },
   {
     "nvim-lualine/lualine.nvim",
@@ -323,5 +343,12 @@ return {
     },
     build = "make tiktoken", -- Only on MacOS or Linux
     opts = {},
+    init = function()
+      vim.g.copilot_filetypes = {
+        rust = false,
+        cpp = false,
+        c = false,
+      }
+    end,
   },
 }
