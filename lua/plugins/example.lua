@@ -35,8 +35,12 @@ return {
         end,
         default_settings = {
           ["rust-analyzer"] = {
-            cargo = { allFeatures = true, loadOutDirsFromCheck = true, buildScripts = { enable = true } },
-            checkOnSave = true,
+            cargo = { 
+              allFeatures = true, 
+              loadOutDirsFromCheck = true, 
+              buildScripts = { enable = true } 
+            },
+            checkOnSave = { command = "check" },
             diagnostics = { enable = true },
             procMacro = { enable = true },
             files = {
