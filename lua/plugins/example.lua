@@ -1,4 +1,38 @@
 return {
+  {
+    "MeanderingProgrammer/render-markdown.nvim",
+    ft = { "markdown", "Avante" },
+    dependencies = {
+      "nvim-treesitter/nvim-treesitter",
+      "nvim-tree/nvim-web-devicons",
+    },
+    opts = {
+      file_types = { "markdown", "Avante" },
+    },
+    keys = {
+      {
+        "<leader>um",
+        function()
+          require("render-markdown").toggle()
+        end,
+        desc = "Toggle Markdown Renderer",
+        ft = { "markdown", "Avante" },
+      },
+    },
+  },
+  {
+    "folke/snacks.nvim",
+    opts = {
+      picker = {
+        sources = {
+          explorer = {
+            hidden = true,
+            ignored = true,
+          },
+        },
+      },
+    },
+  },
   -- Rust support (from LazyVim's rust extra)
   {
     "Saecki/crates.nvim",
