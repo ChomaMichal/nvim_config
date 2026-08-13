@@ -33,91 +33,7 @@ return {
       },
     },
   },
-  -- Rust support (from LazyVim's rust extra)
-  {
-    "Saecki/crates.nvim",
-    event = { "BufRead Cargo.toml" },
-    opts = {
-      completion = { crates = { enabled = true } },
-      lsp = { enabled = true, actions = true, completion = true, hover = true },
-    },
-  },
-  {
-    "nvim-treesitter/nvim-treesitter",
-    opts = { ensure_installed = { "rust", "ron" } },
-  },
-  {
-    "mason-org/mason.nvim",
-    optional = true,
-    opts = function(_, opts)
-      opts.ensure_installed = opts.ensure_installed or {}
-      vim.list_extend(opts.ensure_installed, { "codelldb" })
-    end,
-  },
-  {
-    "mrcjkb/rustaceanvim",
-    ft = { "rust" },
-    opts = {
-      server = {
-        on_attach = function(_, bufnr)
-          vim.keymap.set("n", "<leader>cR", function()
-            vim.cmd.RustLsp("codeAction")
-          end, { desc = "Code Action", buffer = bufnr })
-          vim.keymap.set("n", "<leader>dr", function()
-            vim.cmd.RustLsp("debuggables")
-          end, { desc = "Rust Debuggables", buffer = bufnr })
-        end,
-        default_settings = {
-          ["rust-analyzer"] = {
-            cargo = { 
-              allFeatures = true, 
-              loadOutDirsFromCheck = true, 
-              buildScripts = { enable = true } 
-            },
-            checkOnSave = { command = "check" },
-            diagnostics = { enable = true },
-            procMacro = { enable = true },
-            files = {
-              exclude = {
-                ".direnv",
-                ".git",
-                ".jj",
-                ".github",
-                ".gitlab",
-                "bin",
-                "node_modules",
-                "target",
-                "venv",
-                ".venv",
-              },
-              watcher = "client",
-            },
-          },
-        },
-      },
-    },
-    config = function(_, opts)
-      if LazyVim.has("mason.nvim") then
-        local codelldb = vim.fn.exepath("codelldb")
-        local codelldb_lib_ext = io.popen("uname"):read("*l") == "Linux" and ".so" or ".dylib"
-        local library_path = vim.fn.expand("$MASON/opt/lldb/lib/liblldb" .. codelldb_lib_ext)
-        opts.dap = { adapter = require("rustaceanvim.config").get_codelldb_adapter(codelldb, library_path) }
-      end
-      vim.g.rustaceanvim = vim.tbl_deep_extend("keep", vim.g.rustaceanvim or {}, opts or {})
-      if vim.fn.executable("rust-analyzer") == 0 then
-        LazyVim.error(
-          "**rust-analyzer** not found in PATH, please install it.\nhttps://rust-analyzer.github.io/",
-          { title = "rustaceanvim" }
-        )
-      end
-    end,
-  },
-  {
-    "neovim/nvim-lspconfig",
-    opts = { servers = { rust_analyzer = { enabled = false } } },
-  },
-
-  -- Python support (from LazyVim's python extra)
+  -- Python support (match LazyVim's python extra so uv activation stays intact)
   {
     "nvim-treesitter/nvim-treesitter",
     opts = { ensure_installed = { "ninja", "rst" } },
@@ -128,10 +44,14 @@ return {
       servers = {
         ruff = {
           cmd_env = { RUFF_TRACE = "messages" },
-          init_options = { settings = { logLevel = "error" } },
+          init_options = {
+            settings = {
+              logLevel = "error",
+            },
+          },
           keys = { { "<leader>co", LazyVim.lsp.action["source.organizeImports"], desc = "Organize Imports" } },
         },
-        pyright = {},
+        ruff_lsp = {},
       },
       setup = {
         ruff = function()
@@ -141,6 +61,22 @@ return {
         end,
       },
     },
+  },
+  {
+    "neovim/nvim-lspconfig",
+    opts = function(_, opts)
+      local lsp = vim.g.lazyvim_python_lsp or "pyright"
+      local ruff = vim.g.lazyvim_python_ruff or "ruff"
+
+      opts.servers = opts.servers or {}
+      local servers = { "pyright", "basedpyright", "ruff", "ruff_lsp", ruff, lsp }
+      for _, server in ipairs(servers) do
+        opts.servers[server] = opts.servers[server] or {}
+        opts.servers[server].enabled = server == lsp or server == ruff
+      end
+
+      return opts
+    end,
   },
   {
     "mfussenegger/nvim-dap",
@@ -173,7 +109,12 @@ return {
   {
     "linux-cultist/venv-selector.nvim",
     cmd = "VenvSelect",
-    opts = { options = { notify_user_on_venv_activation = true } },
+    opts = {
+      options = {
+        notify_user_on_venv_activation = true,
+        override_notify = false,
+      },
+    },
     ft = "python",
     keys = { { "<leader>cv", "<cmd>:VenvSelect<cr>", desc = "Select VirtualEnv", ft = "python" } },
   },
